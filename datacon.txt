@@ -1,0 +1,68 @@
+
+
+open $fileasm, $ARGV[0];
+seek $fileasm, 0, 0;
+open $fileout, ">fileout.txt";
+foreach $row_i_ (<$fileasm>)
+{
+if ($row_i_ =~ /.asciiz/){
+my @data_arr = split (/[""]/, $row_i_);
+my @variable = unpack("C*", $data_arr[1]);   #chuyen doi chuoi duoc luu trong mang thanh chuoi so thap luc phan
+push(@DB_var, @variable);
+push(@DB_var, $zero);
+}
+elsif ($row_i_ =~ /.ascii/){ 
+my @data_arr = split (/[""]/, $row_i_);
+my @variable = unpack("C*", $data_arr[1]);
+push(@DB_var, @variable);
+}
+elsif ($row_i_ =~ /.byte/){ 
+my @data_arr = split(/ /, $row_i_);
+for (my $i = 2; $i < scalar @data_arr; $i++){
+my $variable = $data_arr[$i];
+push(@DB_var, $variable);
+}
+}
+elsif ($row_i_ =~ /.word/){ #if $row have .word
+while(scalar @DB_var % 4 != 0){
+push(@DB_var, $zero);
+}
+my @data_arr = split(/ /, $row_i_);
+for (my $i = 2; $ i < scalar @data_arr; $i++){
+push(@DB_var, @data_arr[$i]);
+push(@DB_var, $zero);
+push(@DB_var, $zero);
+push(@DB_var, $zero);
+}
+}
+elsif ($row_i_ =~ /.text/){ #if $rơ have .text
+for (my $i = 0; $i < scalar @DB_var; $i++){
+$DB_var[$i] = sprintf('%.2x', $DB_var[$i]);
+}
+write_data_out();
+}
+}
+close $fileasm;
+}
+sub write_data_out
+{
+my $i_arr = 0;
+
+my $row_i = 1;
+while($i_arr != scalar(@DB_var)){
+my $variable = join("", $DB_var[$i_arr + 3], $DB_var[$i_arr + 2],
+$DB_var[$i_arr + 1], $DB_var[$i_arr]);
+$variable = sprintf('%08s', $variable);
+$variable = substr($variable, -8);
+print $fileout $variable;
+print $fileout "\n";
+$i_arr += 4;
+$row_i += 1;
+}
+while($row_i != 1025){
+print $fileout "00000000\n";
+$row_i += 1;
+}
+print $fileout "\n";
+close $fileout;
+}

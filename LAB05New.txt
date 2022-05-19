@@ -1,0 +1,379 @@
+#!/usr/bin/perl
+
+my %opcode = (add   => '000000',
+	      addi  => '001000',
+	      addiu => '001001',
+	      addu  => '000000',
+	      and   => '000000',
+	      andi  => '001100',
+	      beq   => '000100',
+	      bne   => '000101',
+	      j     => '000010',
+	      jal   => '000011',
+	      jr    => '000000',
+	      lbu   => '100100',
+	      lhu   => '100101',
+	      lui   => '001111',
+	      lw    => '100011',
+	      or    => '000000',
+	      ori   => '001101',
+	      slt   => '000000',
+	      slti  => '001010',
+	      sll   => '000000',
+	      srl   => '000000',
+	      sw    => '101011',
+	      sub   => '000000');
+
+my %reg = ('$zero' => '00000',
+	   '$at'   => '00001',
+	   '$v0'   => '00010',
+	   '$v1'   => '00011',
+	   '$a0'   => '00100',
+	   '$a1'   => '00101',
+	   '$a2'   => '00110',
+	   '$a3'   => '00111',
+	   '$t0'   => '01000',
+	   '$t1'   => '01001',
+	   '$t2'   => '01010',
+	   '$t3'   => '01011',
+	   '$t4'   => '01100',
+	   '$t5'   => '01101',
+	   '$t6'   => '01110',
+	   '$t7'   => '01111',
+	   '$s0'   => '10000',
+	   '$s1'   => '10001',
+	   '$s2'   => '10010',
+	   '$s3'   => '10011',
+	   '$s4'   => '10100',
+	   '$s5'   => '10101',
+	   '$s6'   => '10110',
+	   '$s7'   => '10111',
+	   '$t8'   => '11000',
+	   '$t9'   => '11001',
+	   '$k0'   => '11010',
+	   '$k1'   => '11011',
+	   '$gp'   => '11100',
+	   '$sp'   => '11101',
+	   '$fp'   => '11110',
+	   '$ra'   => '11111',
+	   '$0' => '00000',
+	   '$1' => '00001',
+	   '$2' => '00010',
+	   '$3' => '00011',
+	   '$4' => '00100',
+	   '$5' => '00101',
+	   '$6' => '00110',
+	   '$7' => '00111',
+	   '$8' => '01000',
+	   '$9' => '01001',
+	   '$10' => '01010',
+	   '$11' => '01011',
+	   '$12' => '01100',
+	   '$13' => '01101',
+	   '$14' => '01110',
+	   '$15' => '01111',
+	   '$16' => '10000',
+	   '$17' => '10001',
+	   '$18' => '10010',
+	   '$19' => '10011',
+	   '$20' => '10100',
+	   '$21' => '10101',
+	   '$22' => '10110',
+	   '$23' => '10111',
+	   '$24' => '11000',
+	   '$25' => '11001',
+	   '$26' => '11010',
+	   '$27' => '11011',
+	   '$28' => '11100',
+	   '$29' => '11101',
+	   '$30' => '11110',
+	   '$31' => '11111');
+
+my %format = (add   => 'R',
+	      addi  => 'I',
+	      addiu => 'I',
+	      addu  => 'R',
+	      and   => 'R',
+	      andi  => 'I',
+	      beq   => 'I1',
+	      bne   => 'I1',
+	      j     => 'J',
+	      jal   => 'J',
+	      jr    => 'RJ',
+	      lbu   => 'I2',
+	      lhu   => 'I2',
+	      ll    => 'I2',
+	      lui   => 'I3',
+	      lw    => 'I2',
+	      or    => 'R',
+	      ori   => 'I',
+	      slt   => 'R',
+	      slti  => 'I',
+	      sltiu => 'I',
+	      sltu  => 'I',
+	      sll   => 'R',
+	      srl   => 'R',
+	      sb    => 'I2',
+	      sc    => 'I2',
+	      sh    => 'I2',
+	      sw    => 'I2',
+	      sub   => 'R',
+	      subu  => 'R'
+);
+
+my %function = (add   => '100000',
+	        addi  => '001000',
+		addiu => '001001',
+		addu  => '100001',
+		and   => '100100',
+		andi  => '001100',
+		beq   => '000100',
+		bne   => '000101',
+		j     => '000010',
+		jal   => '000011',
+		jr    => '001000',
+		lbu   => '100100',
+		lhu   => '100101',
+		ll    => '011110',
+		lui   => '001111',
+		lw    => '100011',
+		nor   => '011011',
+		or    => '100101',
+		ori   => '001101',
+		slt   => '101010',
+		slti  => '001010',
+		sltiu => '001011',
+		sltu  => '101011',
+	        sll   => '000000',
+		sb    => '011100',
+		sc    => '100110',
+		sh    => '011101',
+	        srl   => '000010',
+	        sw    => '101011',
+                sub   => '100010',
+		subu  => '010111'
+);
+my $fasm;
+my $ftxt = 'input.txt';
+my $fh;
+
+if (open($fasm, '<', $ARGV[0])) 
+{
+        open ($fh, '>', $ftxt);
+        while (my $row = <$fasm>) 
+	{
+        	chomp $row;
+                @_str = split(/#/, $row);
+                $string[0] =~ s/^\s+|\s+$//;
+                my ($value1, $value2) = split(/ /, $string[0], 2);
+		my ($x, $y) = split(/ /, $value2, 2);
+                $value1 =~ s/\s//gs;
+		$value2 =~ s/\s//gs;
+		$y =~ s/\s//gs;
+		if ((length($value1) == 5) and (length($y) == 10))
+		{
+			$value1 = join(" ", $value1, $x);
+			$value2 = $y;
+		}
+		@_str1 = split(/,/, $value2);
+                $out = join(" ", @_str1);
+                $outer = join(" ", $value1, $out);
+		printf $fh "$outer\n";
+        }
+}
+close($fasm);
+close($fh);
+
+
+my $fasm;
+my $fout;
+open($fasm,'<', $ARGV[0]);
+seek($fasm, 0, 0);
+open($fout, ">DATAsegment.bin");
+foreach $row_i_ (<$fasm>) {
+	if ($row_i_ =~ /.word/){
+		while(scalar @DB_var % 4 != 0){
+			push(@DB_var, $0);
+		}
+		my @data_arr = split(/ /, $row_i_);
+	        for (my $i = 2; $i < scalar @data_arr; $i++){
+	                push(@DB_var, @data_arr[$i]);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+		        }
+	        }
+	elsif ($row_i_ =~ /.asciiz/){
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[1]); 
+		push(@DB_var, @variable);
+		push(@DB_var, $0);
+	}
+	elsif ($row_i_ =~ /.ascii/){ 
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[0]);
+		push(@DB_var, @variable);
+	}
+	elsif ($row_i_ =~ /.byte/){ 
+		my @data_arr = split(/ /, $row_i_);
+		for (my $i = 2; $i < scalar @data_arr; $i++){
+			my $variable = $data_arr[$i];
+			push(@DB_var, $variable);
+		}
+	}
+	elsif ($row_i_ =~ /.text/){
+	        for (my $i = 0; $i < scalar @DB_var; $i++){
+		        $DB_var[$i] = sprintf('%.2x', $DB_var[$i]);
+		}
+	mv_convert_dataout();
+	}
+}		
+sub mv_convert_dataout{
+	my $i_arr = 0;
+	my $row_i = 1;
+	while($i_arr != scalar(@DB_var)){
+		my $variable = join("", $DB_var[$i_arr + 3], $DB_var[$i_arr + 2],
+		$DB_var[$i_arr + 1], $DB_var[$i_arr]);
+		$variable = sprintf('%08s', $variable);
+		$variable = substr($variable, -8);
+		print $fout $variable;
+		print $fout "\n";
+		$i_arr += 4;
+		$row_i += 1;
+	}	
+	while($row_i != 1025){
+		print $fout "00000000\n";
+		$row_i += 1;
+	}
+	print $fout "\n";
+	
+}
+close($fasm);
+close $fout;
+
+my $f1, $f2;
+my $dem = 0;
+my $opt, $opcd, $rs, $rt, $rd, $shamt, $func;
+if (open($f1, '<', $ftxt))
+{
+	open($f2, '>TEXTsegment.bin');
+	while(my $row = <$f1>)
+	{
+		chomp $row;
+		
+		if ((substr($row, -2) ne ': ') and (length($row) > 1))
+			{$dem += 1;}
+		my ($out1, $out2, $out3, $out4, $out5) = split(/ /, $row, 5);
+		if (length($opcode{$out1}) != 6 and length($opcode{$out2}) == 6)
+		{
+			$out1 = $out2;
+			$out2 = $out3;
+			$out3 = $out4;
+			$out4 = $out5;
+		}
+		$op = $format{$out1};
+		$opc = $opcode{$out1};
+		if ($op eq 'R')
+		{
+			$rs = $register{$out3};
+			$rt = $register{$out4};
+			$rd = $register{$out2};
+			$shamt = '00000';
+			$func = $function{$out1};
+			my $out_res = $opc.$rs.$rt.$rd.$shamt.$func;
+			printf $f2 "$out_res";
+			#print $f2 "\n";
+		}
+	        elsif ($op eq 'RJ')
+		{
+			$rs = $register{$out2};
+			my $value_ = '000000000000000';
+			$func = $function{$out1};
+			my $out_res = $opc.$rs.$value_.$func;
+			printf $f2 "$out_res\n";
+		}	
+		elsif ($op eq 'I')
+		{
+			$rs = $register{$out3};
+			$rt = $register{$out2};
+			my $binary_ = sprintf ("%.16b", $out4);
+			$binary_ = substr($binary_, -16);
+			my $out_res = $opc.$rs.$rt.$binary_;
+			printf $f2 "$out_res\n";
+		}
+		elsif ($op eq 'J')
+		{
+			my $dem_ = 4194304; #0x00400000
+			open($fh, '<', $ftxt);	
+			while($line1_ = <$fh>)
+			{
+				chomp $line1_;
+				my ($m1, $m2) = split(/:/, $line1_);
+				my ($n1, $n2) = split(/ /, $line1_);
+				if ($m1 eq $out2)
+				{
+					$out2 = $dem_;
+				}
+				if ((substr($line1_, -1) ne ':') and (length($line1_) != 0) and length($opcode{$n1}) == 6)
+				{
+					$dem_ += 4;
+				}
+			}
+			close ($fh);
+			
+			my $binary_ = sprintf ("%.26b", $out2);
+			$binary_ = substr($binary_, -26);
+			my $value_ = substr ($binary_, 24, 2); # Lay 2 bit cuoi cua chuoi $binary_
+			$binary_ = substr ($binary_, 0, 24);
+			my $out_res = $opc.$value_.$binary_;
+			printf $f2 "$out_res\n";
+		}
+		elsif ($op eq 'I1')
+		{
+			my $dem1 = 0;
+			my $dem2;
+			open($fh, '<', $ftxt);
+		    	while($line1_ = <$fh>)
+			{
+			chomp $line1_;
+			my ($a, $b) = split(/:/, $line1_, 2);				
+			if ($a eq $out4){
+          	                      $dem2 = $dem1;
+	                        }
+				
+			if ((substr($line1_, -2) ne ': ') and (length($line1_) > 1)){
+					$dem1 += 1;
+				}
+			}	
+			my $dem_ = $dem2 - $dem;	
+			close ($fh);
+			my $binary_ = sprintf ("%.16b", $dem_);
+			$binary_ = substr($binary_, -16);
+			$rs = $register{$out2};
+			$rt = $register{$out3};
+			my $out_res = $opc.$rs.$rt.$binary_;
+			printf $f2 "$out_res\n";
+		}
+		elsif ($op eq 'I2')
+		{
+			my ($value1, $value2) = split(/[()]/, $out3);
+			$rs = $register{$value2};
+			$rt = $register{$out2};
+			my $binary_ = sprintf ("%.16b", $value1);
+			$binary_ = substr($binary_, -16);
+			my $out_res = $opc.$rs.$rt.$binary_; 
+			printf $f2 "$out_res\n";
+		}
+		elsif ($op eq 'I3')
+		{
+			my $binary_ = sprintf ("%.16b", $out3);
+			my $value_ = '00000';
+			$rt = $register{$out2};
+			my $out_res = $opc.$value_.$rt.$binary_;
+			printf $f2 "$out_res\n";
+		}
+	}
+}
+
+close($f1);
+close($f2);

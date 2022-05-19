@@ -1,0 +1,219 @@
+#!/usr/bin/perl
+my %opcode = (add   => '000000',
+	      addi  => '001000',
+	      addiu => '001001',
+	      addu  => '000000',
+	      and   => '000000',
+	      andi  => '001100',
+	      beq   => '000100',
+	      bne   => '000101',
+	      j     => '000010',
+	      jal   => '000011',
+	      jr    => '000000',
+	      lbu   => '100100',
+	      lhu   => '100101',
+	      lui   => '001111',
+	      lw    => '100011',
+	      or    => '000000',
+	      ori   => '001101',
+	      slt   => '000000',
+	      slti  => '001010',
+	      sll   => '000000',
+	      srl   => '000000',
+	      sw    => '101011',
+	      sub   => '000000');
+
+my %reg = ('$zero' => '00000',
+	   '$at'   => '00001',
+	   '$v0'   => '00010',
+	   '$v1'   => '00011',
+	   '$a0'   => '00100',
+	   '$a1'   => '00101',
+	   '$a2'   => '00110',
+	   '$a3'   => '00111',
+	   '$t0'   => '01000',
+	   '$t1'   => '01001',
+	   '$t2'   => '01010',
+	   '$t3'   => '01011',
+	   '$t4'   => '01100',
+	   '$t5'   => '01101',
+	   '$t6'   => '01110',
+	   '$t7'   => '01111',
+	   '$s0'   => '10000',
+	   '$s1'   => '10001',
+	   '$s2'   => '10010',
+	   '$s3'   => '10011',
+	   '$s4'   => '10100',
+	   '$s5'   => '10101',
+	   '$s6'   => '10110',
+	   '$s7'   => '10111',
+	   '$t8'   => '11000',
+	   '$t9'   => '11001',
+	   '$k0'   => '11010',
+	   '$k1'   => '11011',
+	   '$gp'   => '11100',
+	   '$sp'   => '11101',
+	   '$fp'   => '11110',
+	   '$ra'   => '11111',
+	   '$0' => '00000',
+	   '$1' => '00001',
+	   '$2' => '00010',
+	   '$3' => '00011',
+	   '$4' => '00100',
+	   '$5' => '00101',
+	   '$6' => '00110',
+	   '$7' => '00111',
+	   '$8' => '01000',
+	   '$9' => '01001',
+	   '$10' => '01010',
+	   '$11' => '01011',
+	   '$12' => '01100',
+	   '$13' => '01101',
+	   '$14' => '01110',
+	   '$15' => '01111',
+	   '$16' => '10000',
+	   '$17' => '10001',
+	   '$18' => '10010',
+	   '$19' => '10011',
+	   '$20' => '10100',
+	   '$21' => '10101',
+	   '$22' => '10110',
+	   '$23' => '10111',
+	   '$24' => '11000',
+	   '$25' => '11001',
+	   '$26' => '11010',
+	   '$27' => '11011',
+	   '$28' => '11100',
+	   '$29' => '11101',
+	   '$30' => '11110',
+	   '$31' => '11111');
+
+my %format = (add   => 'R',
+	      addi  => 'I',
+	      addiu => 'I',
+	      addu  => 'R',
+	      and   => 'R',
+	      andi  => 'I',
+	      beq   => 'IM1',
+	      bne   => 'IM1',
+	      j     => 'J',
+	      jal   => 'J',
+	      jr    => 'RJ',
+	      lbu   => 'IM2',
+	      lhu   => 'IM2',
+	      ll    => 'IM2',
+	      lui   => 'IM3',
+	      lw    => 'IM2',
+	      or    => 'R',
+	      ori   => 'I',
+	      slt   => 'R',
+	      slti  => 'I',
+	      sltiu => 'I',
+	      sltu  => 'I',
+	      sll   => 'R',
+	      srl   => 'R',
+	      sb    => 'IM2',
+	      sc    => 'IM2',
+	      sh    => 'IM2',
+	      sw    => 'IM2',
+	      sub   => 'R',
+	      subu  => 'R'
+);
+
+my %function = (add   => '100000',
+	        addi  => '001000',
+		addiu => '001001',
+		addu  => '100001',
+		and   => '100100',
+		andi  => '001100',
+		beq   => '000100',
+		bne   => '000101',
+		j     => '000010',
+		jal   => '000011',
+		jr    => '001000',
+		lbu   => '100100',
+		lhu   => '100101',
+		ll    => '011110',
+		lui   => '001111',
+		lw    => '100011',
+		nor   => '011011',
+		or    => '100101',
+		ori   => '001101',
+		slt   => '101010',
+		slti  => '001010',
+		sltiu => '001011',
+		sltu  => '101011',
+	        sll   => '000000',
+		sb    => '011100',
+		sc    => '100110',
+		sh    => '011101',
+	        srl   => '000010',
+	        sw    => '101011',
+                sub   => '100010',
+		subu  => '010111'
+);
+
+my $fileasm;
+my $fileout;
+open($fileasm,'<', $ARGV[0]);
+seek($fileasm, 0, 0);
+open($fileout, ">Datasegment.bin");
+foreach $row_i_ (<$fileasm>) {
+	if ($row_i_ =~ /.word/){
+		while(scalar @DB_var % 4 != 0){
+			push(@DB_var, $0);
+		}
+		my @data_arr = split(/ /, $row_i_);
+	        for (my $i = 2; $i < scalar @data_arr; $i++){
+	                push(@DB_var, @data_arr[$i]);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+		        }
+	        }
+	elsif ($row_i_ =~ /.asciiz/){
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[1]);   #chuyen doi chuoi duoc luu trong mang thanh chuoi so thap luc phan
+		push(@DB_var, @variable);
+		push(@DB_var, $0);
+	}
+	elsif ($row_i_ =~ /.ascii/){ 
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[0]);
+		push(@DB_var, @variable);
+	}
+	elsif ($row_i_ =~ /.byte/){ 
+		my @data_arr = split(/ /, $row_i_);
+		for (my $i = 2; $i < scalar @data_arr; $i++){
+			my $variable = $data_arr[$i];
+			push(@DB_var, $variable);
+		}
+	}
+	elsif ($row_i_ =~ /.text/){
+	        for (my $i = 0; $i < scalar @DB_var; $i++){
+		        $DB_var[$i] = sprintf('%.2x', $DB_var[$i]);
+		}
+	mv_convert_dataout();
+	}
+}		
+sub mv_convert_dataout{
+	my $i_arr = 0;
+	my $row_i = 1;
+	while($i_arr != scalar(@DB_var)){
+		my $variable = join("", $DB_var[$i_arr + 3], $DB_var[$i_arr + 2],
+		$DB_var[$i_arr + 1], $DB_var[$i_arr]);
+		$variable = sprintf('%08s', $variable);
+		$variable = substr($variable, -8);
+		print $fileout $variable;
+		print $fileout "\n";
+		$i_arr += 4;
+		$row_i += 1;
+	}	
+	while($row_i != 1025){
+		print $fileout "00000000\n";
+		$row_i += 1;
+	}
+	print $fileout "\n";
+	close $fileout;
+}
+close($fileasm);

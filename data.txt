@@ -1,0 +1,74 @@
+Hướng thực hiện: khởi tạo 1 mảng dùng để chứa dữ liệu. Sau đó duyệt từng hàng trong
+file input, nếu có dữ liệu (hàng có tồn tại các kiểu dữ liệu như: .asciiz, .ascii, .byte, .word
+,…) thì sử dụng các hàm xử lý chuỗi để thu được data và lưu vào mảng. Sau đó thực hiện
+chuyển data trong mảng sang dạng mã máy rồi viết vào file đầu ra.
+Bảng 1: Chương trình biên dịch data segment
+sub data_processing #this funtion is used to comple declared data
+{
+open $asm, $ARGV[0];
+seek $asm, 0, 0;
+open $data_output, ">data_output.txt";
+foreach $row (<$asm>)
+2
+{
+if ($row =~ /.asciiz/){ #if $row have .asciiz
+my @array = split (/[""]/, $row);
+my @temp = unpack("C*", $array[1]);
+push(@data_array, @temp);
+push(@data_array, $zero);
+}
+elsif ($row =~ /.ascii/){ #if $row have .ascii
+my @array = split (/[""]/, $row);
+my @temp = unpack("C*", $array[1]);
+push(@data_array, @temp);
+}
+elsif ($row =~ /.byte/){ #if $row have .byte
+my @array = split(/ /, $row);
+for (my $i = 2; $i < scalar @array; $i++){
+my $temp = $array[$i];
+push(@data_array, $temp);
+}
+}
+elsif ($row =~ /.word/){ #if $row have .word
+while(scalar @data_array % 4 != 0){
+push(@data_array, $zero);
+}
+my @array = split(/ /, $row);
+for (my $i = 2; $ i < scalar @array; $i++){
+push(@data_array, @array[$i]);
+push(@data_array, $zero);
+push(@data_array, $zero);
+push(@data_array, $zero);
+}
+}
+elsif ($row =~ /.text/){ #if $rơ have .text
+for (my $i = 0; $i < scalar @data_array; $i++){
+$data_array[$i] = sprintf('%.2x', $data_array[$i]);
+}
+write_data_out();
+}
+}
+close $asm;
+}
+sub write_data_out
+{
+my $index = 0;
+3
+my $line = 1;
+while($index != scalar(@data_array)){
+my $temp = join("", $data_array[$index + 3], $data_array[$index + 2],
+$data_array[$index + 1], $data_array[$index]);
+$temp = sprintf('%08s', $temp);
+$temp = substr($temp, -8);
+print $data_output $temp;
+print $data_output "\n";
+$index += 4;
+$line += 1;
+}
+while($line != 1025){
+print $data_output "00000000\n";
+$line += 1;
+}
+print $data_output "\n";
+close $data_output;
+}

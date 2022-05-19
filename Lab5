@@ -1,0 +1,355 @@
+#!/usr/bin/perl
+
+my %opcode = (add   => '000000',
+	      addi  => '001000',
+	      addiu => '001001',
+	      addu  => '000000',
+	      and   => '000000',
+	      andi  => '001100',
+	      beq   => '000100',
+	      bne   => '000101',
+	      j     => '000010',
+	      jal   => '000011',
+	      jr    => '000000',
+	      lbu   => '100100',
+	      lhu   => '100101',
+	      lui   => '001111',
+	      lw    => '100011',
+	      or    => '000000',
+	      ori   => '001101',
+	      slt   => '000000',
+	      slti  => '001010',
+	      sll   => '000000',
+	      srl   => '000000',
+	      sw    => '101011',
+	      sub   => '000000');
+
+my %register = ('$zero' => '00000',
+	   '$at'   => '00001',
+	   '$v0'   => '00010',
+	   '$v1'   => '00011',
+	   '$a0'   => '00100',
+	   '$a1'   => '00101',
+	   '$a2'   => '00110',
+	   '$a3'   => '00111',
+	   '$t0'   => '01000',
+	   '$t1'   => '01001',
+	   '$t2'   => '01010',
+	   '$t3'   => '01011',
+	   '$t4'   => '01100',
+	   '$t5'   => '01101',
+	   '$t6'   => '01110',
+	   '$t7'   => '01111',
+	   '$s0'   => '10000',
+	   '$s1'   => '10001',
+	   '$s2'   => '10010',
+	   '$s3'   => '10011',
+	   '$s4'   => '10100',
+	   '$s5'   => '10101',
+	   '$s6'   => '10110',
+	   '$s7'   => '10111',
+	   '$t8'   => '11000',
+	   '$t9'   => '11001',
+	   '$k0'   => '11010',
+	   '$k1'   => '11011',
+	   '$gp'   => '11100',
+	   '$sp'   => '11101',
+	   '$fp'   => '11110',
+	   '$ra'   => '11111',
+	   '$0' => '00000',
+	   '$1' => '00001',
+	   '$2' => '00010',
+	   '$3' => '00011',
+	   '$4' => '00100',
+	   '$5' => '00101',
+	   '$6' => '00110',
+	   '$7' => '00111',
+	   '$8' => '01000',
+	   '$9' => '01001',
+	   '$10' => '01010',
+	   '$11' => '01011',
+	   '$12' => '01100',
+	   '$13' => '01101',
+	   '$14' => '01110',
+	   '$15' => '01111',
+	   '$16' => '10000',
+	   '$17' => '10001',
+	   '$18' => '10010',
+	   '$19' => '10011',
+	   '$20' => '10100',
+	   '$21' => '10101',
+	   '$22' => '10110',
+	   '$23' => '10111',
+	   '$24' => '11000',
+	   '$25' => '11001',
+	   '$26' => '11010',
+	   '$27' => '11011',
+	   '$28' => '11100',
+	   '$29' => '11101',
+	   '$30' => '11110',
+	   '$31' => '11111');
+
+my %key = (add   => 'R',
+	      addi  => 'I',
+	      addiu => 'I',
+	      addu  => 'R',
+	      and   => 'R',
+	      andi  => 'I',
+	      beq   => 'IM1',
+	      bne   => 'IM1',
+	      j     => 'J',
+	      jal   => 'J',
+	      jr    => 'RJ',
+	      lbu   => 'I',
+	      lhu   => 'I',
+	      lui   => 'I',
+	      lw    => 'IM2',
+	      or    => 'R',
+	      ori   => 'I',
+	      slt   => 'R',
+	      slti  => 'I',
+	      sll   => 'R',
+	      srl   => 'R',
+	      sw    => 'IM2',
+	      sub   => 'R');
+
+my %funct = (add   => '100000',
+	        addi  => '001000',
+		addiu => '001001',
+		addu  => '100001',
+		and   => '100100',
+		andi  => '001100',
+		beq   => '000100',
+		bne   => '000101',
+		j     => '000010',
+		jal   => '000011',
+		jr    => '001000',
+		lbu   => '100100',
+		lhu   => '100101',
+		lui   => '001111',
+		lw    => '100011',
+		or    => '100101',
+		ori   => '001101',
+		slt   => '101010',
+		slti  => '001010',
+	        sll   => '000000',
+	        srl   => '000010',
+	        sw    => '101011',
+                sub   => '100010');
+
+my $fileasm;
+my $fileout;
+open($fileasm,'<', $ARGV[0]);
+seek($fileasm, 0, 0);
+open($fileout, ">Datasegment.bin");
+foreach $row_i_ (<$fileasm>) {
+	if ($row_i_ =~ /.word/){
+		while(scalar @DB_var % 4 != 0){
+			push(@DB_var, $0);
+		}
+		my @data_arr = split(/ /, $row_i_);
+	        for (my $i = 2; $i < scalar @data_arr; $i++){
+	                push(@DB_var, @data_arr[$i]);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+	                push(@DB_var, $0);
+		        }
+	        }
+	elsif ($row_i_ =~ /.asciiz/){
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[1]);   #chuyen doi chuoi duoc luu trong mang thanh chuoi so thap luc phan
+		push(@DB_var, @variable);
+		push(@DB_var, $0);
+	}
+	elsif ($row_i_ =~ /.ascii/){ 
+		my @data_arr = split (/[""]/, $row_i_);
+		my @variable = unpack("C*", $data_arr[0]);
+		push(@DB_var, @variable);
+	}
+	elsif ($row_i_ =~ /.byte/){ 
+		my @data_arr = split(/ /, $row_i_);
+		for (my $i = 2; $i < scalar @data_arr; $i++){
+			my $variable = $data_arr[$i];
+			push(@DB_var, $variable);
+		}
+	}
+	elsif ($row_i_ =~ /.text/){
+	        for (my $i = 0; $i < scalar @DB_var; $i++){
+		        $DB_var[$i] = sprintf('%.2x', $DB_var[$i]);
+		}
+	mv_convert_dataout();
+	}
+}		
+sub mv_convert_dataout{
+	my $i_arr = 0;
+	my $row_i = 1;
+	while($i_arr != scalar(@DB_var)){
+		my $variable = join("", $DB_var[$i_arr + 3], $DB_var[$i_arr + 2],
+		$DB_var[$i_arr + 1], $DB_var[$i_arr]);
+		$variable = sprintf('%08s', $variable);
+		$variable = substr($variable, -8);
+		print $fileout $variable;
+		print $fileout "\n";
+		$i_arr += 4;
+		$row_i += 1;
+	}	
+	while($row_i != 1025){
+		print $fileout "00000000\n";
+		$row_i += 1;
+	}
+	print $fileout "\n";
+	close $fileout;
+}
+close($fileasm);
+
+my $filetxt = 'input.txt';
+
+my $fileasm;
+my $fh;
+sub handle_string {
+if (open($fileasm, '<', $ARGV[0])) {
+        open($fh, '>', $filetxt);
+        while (my $line = <$fileasm>) {
+                chomp $line;
+                @string = split(/#/, $line);
+                $string[0] =~ s/^\s*(.*?)\s*$/$1/;	
+		@string1 = split(/	/, $string[0]);
+                $out1 = join(" ", @string1);
+                @string2 = split(/,/, $out1);
+                $out2 = join("", @string2);
+                print $fh "$out2\n";
+        }
+}
+}
+handle_string();
+close($fileasm);
+close($fh);
+my $fout = 'output.txt';
+my $k;
+my $fh;
+my $dem = 0;
+
+if (open($fh, '<', $filetxt)) {
+	open($k, '>', $fout);
+{
+	while(my $line = <$fh>)
+	{
+		chomp $line;
+		if ((substr($line, -1) ne ':') and (length($line) != 0))
+			{$dem += 1;}
+		my ($vlue1, $vlue2, $vlue3, $vlue4, $vlue5) = split(/ /, $line, 5);
+		if(length($opcode{$vlue1}) != 6 and length($opcode{$vlue2}) == 6)
+		{
+			$vlue1 = $vlue2;
+			$vlue2 = $vlue3;
+			$vlue3 = $vlue4;
+			$vlue4 = $vlue5;
+		}
+		$op = $format{$vlue1};
+		$opc = $opcode{$vlue1};
+		if ($op eq 'R')
+		{
+			$rs = $reg{$vlue3};
+			$rt = $reg{$vlue4};
+			$rd = $reg{$vlue2};
+			$shamt = '00000';
+			$func = $function{$vlue1};
+			my $result = $opc.$rs.$rt.$rd.$shamt.$func;
+			my $hexnum = oct("0b".$result);
+			printf $k '%#.8x', $hexnum; 
+			print $k "\n";
+		}
+	        elsif ($op eq 'RJ')
+		{
+			$rs = $reg{$vlue2};
+			$var = '000000000000000';
+			$func = $function{$vlue1};
+			my $result = $opc.$rs.$var.$func;
+                        my $hexnum = oct("0b".$result);
+                        printf $k '%#.8x', $hexnum;
+			print $k "\n";
+		}	
+		elsif ($op eq 'I')
+		{
+			$rs = $reg{$vlue3};
+			$rt = $reg{$vlue2};
+			my $bin = sprintf ("%.16b", $vlue4);
+			my $bin1 = substr($bin, -16);
+			my $result = $opc.$rs.$rt.$bin1;
+		        my $hexnum = oct("0b".$result);
+			printf $k '%#.8x', $hexnum;
+			print $k "\n";
+		}
+		elsif ($op eq 'IM1')
+		{
+			my $dem1 = 0;
+			my $dem2;
+			open($fh1, '<', $filetxt);
+		    	while($line1 = <$fh1>)
+			{
+				chomp $line1;
+				my ($a, $b) = split(/:/, $line1);
+				if ($a eq $vlue4){
+			        	$dem2 = $dem1;
+				}
+				if ((substr($line1, -1) ne ':') and (length($line1) != 0))
+					{
+						$dem1 += 1;
+					}
+			}	
+			my $count = $dem2 - $dem;
+			close ($fh1);			
+			my $bin = sprintf ("%.16b", $count);
+			$rs = $reg{$vlue2};
+			$rt = $reg{$vlue3};
+			
+			my $result = $opc.$rs.$rt.$bin;
+	                my $hexnum = oct("0b".$result);
+			printf $k '%#.8x', $hexnum;
+			print $k "\n";
+		}
+		elsif ($op eq 'IM2')
+		{
+			my ($var1, $var2) = split(/[()]/, $vlue3);
+			$rs = $reg{$var2};
+			$rt = $reg{$vlue2};
+			my $bin = sprintf ("%.16b", $var1);
+
+			my $result = $opc.$rs.$rt.$bin; 
+ 			my $hexnum = oct("0b".$result);
+                        printf $k '%#.8x', $hexnum;
+			print $k "\n";
+		}
+		elsif ($op eq 'J')
+		{
+			my $count = 4194304; #0x00400000
+			open($fh1, '<', $filetxt);	
+			while($line1 = <$fh1>)
+			{
+				chomp $line1;
+				my ($a1, $a2) = split(/:/, $line1);
+				if ($a1 eq $vlue2)
+				{
+					$vlue2 = $count;
+				}
+				if ((substr($line1, -1) ne ':') and (length($line1) != 0))
+				{
+					$count += 4;
+				}
+			}
+			close ($fh1);
+			my $bin = sprintf ("%.26b", $vlue2);
+			my $var = substr ($bin, 24, 2); # Lay 2 bit cuoi cua chuoi $bin
+			$bin = substr ($bin, 0, 24);
+		
+			my $result = $opc.$var.$bin;
+                        my $hexnum = oct("0b".$result);
+                        printf $k '%#.8x', $hexnum;
+			print $k "\n";
+		}
+	
+	}
+}
+}
+close($k);
+close($fh);	
